@@ -2,7 +2,6 @@ import { Client, GatewayIntentBits, Partials, EmbedBuilder } from "discord.js";
 import fetch from "node-fetch";
 import { TOKEN, MAX_FILE_SIZE } from "./config.js";
 import { addToQueue } from "./queue.js";
-import { fixContent, extractLinks } from "./utils.js";
 import http from "http";
 
 const client = new Client({
@@ -18,6 +17,45 @@ const client = new Client({
 client.once("ready", () => {
   console.log(`Bot iniciado como ${client.user.tag}`);
 });
+
+// 🔧 Función de fix: Gemini + reglas locales
+async function fixContent(content) {
+  let fixed = content;
+
+  // 1. Llamada a Gemini
+  try {
+    const response = await fetch("https://api.gemini.com/v1/fix", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.GEMINI_API_KEY}`
+      },
+      body: JSON.stringify({
+        prompt: "Corrige este script de Roblox. Usa PlayerGui como parent del ScreenGui, Frame como parent de los elementos UI, elimina duplicados y corrige sintaxis rota.",
+        input: content
+      })
+    });
+
+    const data = await response.json();
+    if (data.output) {
+      fixed = data.output;
+    }
+  } catch (err) {
+    console.error("Error al llamar a Gemini:", err);
+  }
+
+  // 2. Reglas locales más específicas
+  fixed = fixed.replace(/screengui_\w+\.Parent\s*=\s*\w+/g, "screengui_894.Parent = game.Players.LocalPlayer:WaitForChild(\"PlayerGui\")");
+  fixed = fixed.replace(/frame_\w+\.Parent\s*=\s*\w+/g, "frame_36.Parent = screengui_894");
+  fixed = fixed.replace(/textlabel_\w+\.Parent\s*=\s*\w+/g, "textlabel_42.Parent = frame_36");
+  fixed = fixed.replace(/textbutton_\w+\.Parent\s*=\s*\w+/g, "textbutton_291.Parent = frame_36");
+  fixed = fixed.replace(/uicorner_\w+\.Parent\s*=\s*\w+/g, "uicorner_835.Parent = frame_36");
+
+  // Corrección de sintaxis rota
+  fixed = fixed.replace(/end\)s\(\)/g, "end");
+
+  return fixed;
+}
 
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
@@ -46,20 +84,12 @@ client.on("messageCreate", async (message) => {
 
           // 🔧 Fix con Gemini + reglas locales
           const fixed = await fixContent(content);
-          const links = extractLinks(content);
 
           const embed = new EmbedBuilder()
             .setTitle("CypherHub Fix Dumpeds/Skidded")
             .setDescription("**Aquí tu file mi bro.**")
             .setColor(0x3498db)
             .setFooter({ text: "CypherHub © 2026" });
-
-          if (links.length > 0) {
-            embed.addFields({
-              name: "Links encontrados:",
-              value: links.join("\n")
-            });
-          }
 
           await message.author.send({
             embeds: [embed],
