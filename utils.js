@@ -1,22 +1,37 @@
-// utils.js
-export function fixContent(content) {
+import fetch from "node-fetch";
+
+// 🔧 Función principal de fix: Gemini + reglas locales
+export async function fixContent(content) {
   let fixed = content;
 
-  // 🔧 1. Corregir padres mal asignados (obj.Parent = obj → obj.Parent = contenedor)
+  // 1. Llamada a Gemini
+  try {
+    const response = await fetch("https://api.gemini.com/v1/fix", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.GEMINI_API_KEY}`
+      },
+      body: JSON.stringify({
+        prompt: "Corrige este script de Roblox. Asegúrate de que cada objeto tenga el padre correcto (ScreenGui → PlayerGui → Frame → Label/Button), elimina duplicados de variables, corrige sintaxis rota como end)s(), y devuelve un código limpio y funcional.",
+        input: content
+      })
+    });
+
+    const data = await response.json();
+    if (data.output) {
+      fixed = data.output;
+    }
+  } catch (err) {
+    console.error("Error al llamar a Gemini:", err);
+  }
+
+  // 2. Reglas locales de limpieza
   fixed = fixed.replace(/(\w+)\.Parent\s*=\s*\1/g, "$1.Parent = frame");
-
-  // 🔧 2. Eliminar cierres rotos como "end)s()"
   fixed = fixed.replace(/end\)s\(\)/g, "end");
-
-  // 🔧 3. Quitar duplicados de variables v8, v9, etc. (simplificación básica)
-  fixed = fixed.replace(/local v\d+\s*=\s*game:GetService\("Workspace"\):GetDescendants\(\)\s*/g, "");
-
-  // 🔧 4. Normalizar fonts y enums (ejemplo)
   fixed = fixed.replace(/Font\.GothamBlack/g, "Enum.Font.GothamBlack");
   fixed = fixed.replace(/Font\.GothamBold/g, "Enum.Font.GothamBold");
-
-  // 🔧 5. Asegurar que ScreenGui se parenta a PlayerGui
-  fixed = fixed.replace(/(\w+)\.Parent\s*=\s*\1/g, "$1.Parent = game.Players.LocalPlayer:WaitForChild(\"PlayerGui\")");
+  fixed = fixed.replace(/local v\d+\s*=\s*game:GetService\("Workspace"\):GetDescendants\(\)\s*/g, "");
 
   return fixed;
 }
