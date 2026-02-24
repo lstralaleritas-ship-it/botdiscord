@@ -28,9 +28,8 @@ client.on("messageCreate", async (message) => {
     }
 
     const attachment = message.attachments.first();
-    const url = attachment.url;
 
-    // ✅ Validación corregida: ahora se usa el nombre del archivo
+    // ✅ Validación estricta: solo .txt o .lua
     if (!attachment.name.endsWith(".txt") && !attachment.name.endsWith(".lua")) {
       return message.reply("Solo se aceptan archivos .txt o .lua.");
     }
@@ -42,9 +41,10 @@ client.on("messageCreate", async (message) => {
     addToQueue({
       handler: async () => {
         try {
-          const response = await fetch(url);
+          const response = await fetch(attachment.url);
           let content = await response.text();
 
+          // 🔧 Aquí se aplica tu fix automático
           const fixed = fixContent(content);
           const links = extractLinks(content);
 
