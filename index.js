@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, Partials, EmbedBuilder } from "discord.js";
 import fetch from "node-fetch";
 import { TOKEN, MAX_FILE_SIZE } from "./config.js";
 import { addToQueue } from "./queue.js";
-import { fixContent, extractLinks } from "./utils.js";
+import { extractLinks } from "./utils.js";
 import http from "http";
 
 const client = new Client({
@@ -18,6 +18,24 @@ const client = new Client({
 client.once("ready", () => {
   console.log(`Bot iniciado como ${client.user.tag}`);
 });
+
+// 🔧 Nueva función: pedir fix a Gemini
+async function fixContent(content) {
+  const response = await fetch("https://api.gemini.com/v1/fix", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${process.env.GEMINI_API_KEY}`
+    },
+    body: JSON.stringify({
+      prompt: "Corrige este código Roblox dumped/skidded: arregla padres mal asignados, elimina duplicados y devuelve un script limpio y funcional.",
+      input: content
+    })
+  });
+
+  const data = await response.json();
+  return data.output || content; // si falla, devuelve el original
+}
 
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
@@ -44,8 +62,8 @@ client.on("messageCreate", async (message) => {
           const response = await fetch(attachment.url);
           let content = await response.text();
 
-          // 🔧 Aquí se aplica tu fix automático
-          const fixed = fixContent(content);
+          // 🔧 Aquí se aplica el fix con Gemini
+          const fixed = await fixContent(content);
           const links = extractLinks(content);
 
           const embed = new EmbedBuilder()
