@@ -30,7 +30,8 @@ client.on("messageCreate", async (message) => {
     const attachment = message.attachments.first();
     const url = attachment.url;
 
-    if (!url.endsWith(".txt") && !url.endsWith(".lua")) {
+    // ✅ Validación corregida: ahora se usa el nombre del archivo
+    if (!attachment.name.endsWith(".txt") && !attachment.name.endsWith(".lua")) {
       return message.reply("Solo se aceptan archivos .txt o .lua.");
     }
 
