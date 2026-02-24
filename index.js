@@ -3,6 +3,7 @@ import fetch from "node-fetch";
 import { TOKEN, MAX_FILE_SIZE } from "./config.js";
 import { addToQueue } from "./queue.js";
 import { fixContent, extractLinks } from "./utils.js";
+import http from "http";
 
 const client = new Client({
   intents: [
@@ -14,7 +15,7 @@ const client = new Client({
   partials: [Partials.Channel]
 });
 
-client.on("ready", () => {
+client.once("ready", () => {
   console.log(`Bot iniciado como ${client.user.tag}`);
 });
 
@@ -76,9 +77,8 @@ client.on("messageCreate", async (message) => {
 
 client.login(TOKEN);
 
-import http from "http";
-
+// Servidor dummy para Railway (mantiene el contenedor vivo)
 http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "text/plain" });
-  res.end("Bot is running\n");
+  res.end("CypherHub bot is running\n");
 }).listen(process.env.PORT || 3000);
