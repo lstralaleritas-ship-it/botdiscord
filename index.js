@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, Partials, EmbedBuilder } from "discord.js";
 import fetch from "node-fetch";
 import { TOKEN, MAX_FILE_SIZE } from "./config.js";
 import { addToQueue } from "./queue.js";
-import { extractLinks } from "./utils.js";
+import { fixContent, extractLinks } from "./utils.js";
 import http from "http";
 
 const client = new Client({
@@ -18,41 +18,6 @@ const client = new Client({
 client.once("ready", () => {
   console.log(`Bot iniciado como ${client.user.tag}`);
 });
-
-// 🔧 Función de fix: Gemini + reglas locales
-async function fixContent(content) {
-  let fixed = content;
-
-  try {
-    const response = await fetch("https://api.gemini.com/v1/fix", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.GEMINI_API_KEY}`
-      },
-      body: JSON.stringify({
-        prompt: "Corrige este script de Roblox. Asegúrate de que cada objeto tenga el padre correcto (ScreenGui → PlayerGui → Frame → Label/Button), elimina duplicados de variables, corrige sintaxis rota como end)s(), y devuelve un código limpio y funcional.",
-        input: content
-      })
-    });
-
-    const data = await response.json();
-    if (data.output) {
-      fixed = data.output;
-    }
-  } catch (err) {
-    console.error("Error al llamar a Gemini:", err);
-  }
-
-  // 🧹 Post‑procesamiento local
-  fixed = fixed.replace(/(\w+)\.Parent\s*=\s*\1/g, "$1.Parent = frame");
-  fixed = fixed.replace(/end\)s\(\)/g, "end");
-  fixed = fixed.replace(/Font\.GothamBlack/g, "Enum.Font.GothamBlack");
-  fixed = fixed.replace(/Font\.GothamBold/g, "Enum.Font.GothamBold");
-  fixed = fixed.replace(/local v\d+\s*=\s*game:GetService\("Workspace"\):GetDescendants\(\)\s*/g, "");
-
-  return fixed;
-}
 
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
