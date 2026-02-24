@@ -75,3 +75,10 @@ client.on("messageCreate", async (message) => {
 });
 
 client.login(TOKEN);
+
+import http from "http";
+
+http.createServer((req, res) => {
+  res.writeHead(200, { "Content-Type": "text/plain" });
+  res.end("Bot is running\n");
+}).listen(process.env.PORT || 3000);
